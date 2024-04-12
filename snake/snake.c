@@ -212,12 +212,12 @@ void render_snake(SDL_Renderer *renderer, snake_t *snake) {
     SDL_Rect cell;
     cell.w = CELL_SIZE;
     cell.h = CELL_SIZE;
-    Uint8 alpha = 255;
-    Uint8 step = 160 / snake->length;
+    double alpha = 255;
+    double step = 160 / (double)snake->length;
     while (current) {
         cell.x = OFFSET_X + current->x * CELL_SIZE;
         cell.y = OFFSET_Y + current->y * CELL_SIZE;
-        SDL_SetRenderDrawColor(renderer, 0x34, 0xEB, 0x61, alpha);
+        SDL_SetRenderDrawColor(renderer, 0x34, 0xEB, 0x61, (Uint8)alpha);
         SDL_RenderFillRect(renderer, &cell);
         alpha -= step;
         current = current->next;
@@ -243,11 +243,64 @@ void render(SDL_Renderer *renderer, snake_t *snake, apple_t *apple) {
     render_apple(renderer, apple);
     SDL_SetRenderDrawColor(renderer, 0x11, 0x11, 0x11, SDL_ALPHA_OPAQUE);
     SDL_RenderPresent(renderer);
-    SDL_Delay(60);
+}
+
+direction_t ai1(snake_t *snake, apple_t *apple, direction_t direction) {
+    int x = snake->head->x;
+    int y = snake->head->y;
+    if (y == 0) {
+        if (x == 0) {
+            return DOWN;
+        } else {
+            return LEFT;
+        }
+    } else if (y == 1 && x != GRID_SIZE - 1) {
+        if (x % 2 == 0) {
+            return DOWN;
+        } else {
+            return RIGHT;
+        }
+    } else if (y == GRID_SIZE - 1) {
+        if (x % 2 == 0) {
+            return RIGHT;
+        } else {
+            return UP;
+        }
+    }
+    return direction;
+}
+
+direction_t ai2(snake_t *snake, apple_t *apple, direction_t direction) {
+    int dx = apple->x - snake->head->x;
+    int dy = apple->y - snake->head->y;
+    
+
+    if (abs(dx) > 0) {
+        goto x;
+    } else {
+        goto y;
+    }
+    
+    x:
+    if (dx < 0 && direction != RIGHT) {
+        return LEFT;
+    } else if (direction != LEFT) {
+        return RIGHT;
+    }
+    y:
+    if (dy < 0 && direction != DOWN) {
+        return UP;
+    } else if (direction != UP) {
+        return DOWN;
+    } else {
+        goto x;
+    }
+    return direction;
 }
 
 void game_loop(SDL_Renderer *renderer) {
     bool quit = false;
+    int ai_mode = 0;
     direction_t direction;
     SDL_Event event;
     snake_t *snake = init_snake(5, &direction);
@@ -266,6 +319,15 @@ void game_loop(SDL_Renderer *renderer) {
                     switch(event.key.keysym.sym) {
                         case SDLK_ESCAPE:
                             quit = true;
+                            break;
+                        case SDLK_0:
+                            ai_mode = 0;
+                            break;
+                        case SDLK_1:
+                            ai_mode = 1;
+                            break;
+                        case SDLK_2:
+                            ai_mode = 2;
                             break;
                         case SDLK_w:
                         case SDLK_UP:
@@ -299,6 +361,18 @@ void game_loop(SDL_Renderer *renderer) {
                     }
             }
         }
+        switch (ai_mode) {
+            case 0:
+                break;
+            case 1:
+                direction = ai1(snake, apple, direction);
+                break;
+            case 2:
+                direction = ai2(snake, apple, direction);
+                break;
+            default:
+                break;
+        }
         // Render LOOP START
         move_snake(snake, apple, direction);
         if (is_game_over(snake, apple)) {
@@ -307,7 +381,9 @@ void game_loop(SDL_Renderer *renderer) {
 
         }
         render(renderer, snake, apple);
+        SDL_Delay(60);
         // RENDER LOOP END
+        
     }
 }
 
